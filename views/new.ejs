@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post</title>
+</head>
+<body>
+
+<% if (error.length > 0) { %>
+
+    <% error.forEach(msg => { %>
+
+        <p>❌ <%= msg %></p>
+
+    <% }) %>
+
+<% } %>
+
+    <h1>Add to Our DataBase</h1>
+    <form action="/user" method="post">
+        <input type="text" placeholder="username" name="username" value="<%= oldUsername %>">
+        <br><br>
+        <input type="email" placeholder="Enter your email" name="email" value="<%= oldEmail %>">
+        <br><br>
+        <input type="text" placeholder="enter your password" name="password">
+        <br><br>
+        <button>Add</button>
+    </form>
+</body>
+</html>

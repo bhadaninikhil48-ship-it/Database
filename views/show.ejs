@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Show_Page</title>
+    <style>
+        table,tr,td,th{
+            border: 2px solid black;
+        }
+    </style>
+</head>
+<body>
+
+    <% if(success.length>0) {%>
+        <p><%= success %></p>
+    <%}%>
+
+    <% if(error.length>0) {%>
+        <p><%= error %></p>
+
+    <% } %>
+
+    <!-- condition based login/logout -->
+    <% if (currentUserId) { %>
+
+    <p>Welcome!</p>
+
+    <form action="/logout" method="POST">
+        <button>Logout</button>
+    </form>
+
+<% } else { %>
+
+    <a href="/login">Login</a>
+    <a href="/user/new">Register</a>
+
+<% } %>
+
+
+
+    <form action="/user" method="get">
+        <input type="text" placeholder="search by name or email" name="search" value="<%= search || ''%>">
+        <button>Submit</button>
+    </form>
+
+    <% if(result.length===0) {%>
+
+        <h3>No user found for "<%= search %>"</h3>
+   <% } else{%>
+    <table>
+        <tr>
+            <th>id</th>
+            <th>username</th>
+            <th>email</th>
+            <th>password</th>
+           
+        </tr>
+ 
+ <%for(user of result){%>
+    <tr>
+    <td><%= user.id %></td>
+    <td><%= user.username %></td>
+    <td><%= user.email %></td>
+    <td><%= user.password %></td>
+    <td>
+        <form action="/user/<%= user.id %>/edit">
+            <button>Edit</button>
+        </form>
+    </td>
+    <td>
+        <form action="/user/<%= user.id%>/delete">
+            <button>Delete</button>
+        </form>
+    </td>
+    </tr>
+ <%}%>
+    </table>
+
+   <%}%>
+
+</body>
+</html>
+

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home page</title>
+</head>
+<body>
+        <!-- condition based login/logout -->
+    <% if (currentUserId) { %>
+
+    <p>Welcome!</p>
+
+    <form action="/logout" method="POST">
+        <button>Logout</button>
+    </form>
+
+<% } else { %>
+
+    <a href="/login">Login</a>
+    <br><br>
+    <a href="/user/new">Register</a>
+
+<% } %>
+
+    <h3>The total number of user are: <%= count %></h3>
+    <button><a href="http://localhost:3000/user/new">Join us today!</a></button>
+    <br><br>
+    <button><a href="http://localhost:3000/user">See our users!</a></button>
+</body>
+</html>
