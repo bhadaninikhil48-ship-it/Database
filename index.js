@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express")
 const { faker } = require('@faker-js/faker');
 const { v4: uuidv4 } = require("uuid");
@@ -16,7 +17,7 @@ app.use(express.urlencoded({ extended: true }))
 
 app.use(
     session({
-        secret: "mySecret",
+        secret: process.env.SESSION_SECRET,
         resave: false,
         saveUninitialized: false
     })
@@ -41,16 +42,32 @@ app.use(methodOverride("_method"))
 app.set("view engine", "ejs")
 app.set("views", path.join(__dirname, "/views"))
 
-// Get the client
-const mysql = require('mysql2');
+// // Get the client
+// const mysql = require('mysql2');
+
+//New
+const mysql = require("mysql2/promise");
+
 const { hash } = require("crypto");
 
 // Create the connection to database
-const connection = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  database: 'hostel',
-  password: "MySql@1234$&"
+// const connection = mysql.createConnection({
+//   host: 'localhost',
+//   user: 'root',
+//   database: 'hostel',
+//   password: "MySql@1234$&"
+// });
+
+//New
+const pool = mysql.createPool({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    database: process.env.DB_NAME,
+    password: process.env.DB_PASSWORD,
+
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
 });
 
 let getRandomData = () => {
@@ -68,35 +85,7 @@ let getRandomData = () => {
 
 }
 
-//Inserting new data
-// let q = "insert into user (id, username, email, password) VALUES ?"
-// let users = [
-//   ["321","Nikro","Nikro@gmail.com","hsk*938"],
-//   ["221","Likro","Likro@gmail.com","hsk*34938"]
-// ]
 
-// let data = [];
-// for(let i=1; i<=100; i++){
-//   data.push(getRandomData())
-// }
-
-
-
-
-// connection.end();
-
-// let password = "abc123";
-
-// bcrypt.hash(password, 10, (err, hash) => {
-
-//     if (err) {
-//         console.log(err);
-//         return;
-//     }
-
-//     console.log("Original:", password);
-//     console.log("Hashed:", hash);
-// });
 
 //Validater
 const userValidation = [
@@ -144,20 +133,31 @@ function isOwner(req,res,next){
 }
 
 
-app.get('/', (req, res) => {
+app.get('/', async(req, res) => {
 
   let q = `select count(*) from user`
 
-  try {
-    connection.query(q, (err, result) => {
-      if (err) throw err;
-      let count = result[0]["count(*)"]
-      res.render("home.ejs", { count })
-    });
-  } catch (err) {
-    console.log(err);
-    res.send("some err in database")
-  }
+ try{
+
+  // const db = await promiseConnection;
+
+  const [result] = await pool.query(
+
+    "SELECT COUNT(*) FROM USER"
+
+  )
+
+  let count = result[0]["count(*)"];
+
+ return res.render("home.ejs", {count})
+
+ }catch(err){
+
+  console.log(err)
+  res.flash("error","Some error in database")
+ return res.redirect("/login")
+
+ }
 
 
 })
@@ -166,63 +166,54 @@ app.get("/login",(req,res)=>{
   res.render("login.ejs")
 })
 
-app.post("/login",(req,res)=>{
-  let {email, password} = req.body
+app.post("/login", async (req, res) => {
 
-  console.log(email)
-  console.log(password)
+    let { email, password } = req.body;
 
-  let q = "select * from user where email = ?"
+    try {
 
-  connection.query(q,[email],(err,result)=>{
-    if(err){
-      console.log(err)
+        // const db = await promiseConnection;
 
-      req.flash("error","Database error!")
-     return res.redirect("/login")
-    }
+        const [result] = await pool.query(
+            "SELECT * FROM user WHERE email = ?",
+            [email]
+        );
 
-    let user = result[0]
+        let user = result[0];
 
-    if (!user) {
+        if (!user) {
             req.flash("error", "Email or password is incorrect!");
             return res.redirect("/login");
         }
 
-    console.log(user)
+        const isMatch = await bcrypt.compare(
+            password,
+            user.password
+        );
 
-    bcrypt.compare(password,user.password,(err, isMatch)=>{
+        if (!isMatch) {
+            req.flash("error", "Email or password is incorrect!");
+            return res.redirect("/login");
+        }
 
-      if(err){
-        console.log(err)
+        req.session.userId = user.id;
 
-        req.flash("error","Password comparison error!")
-        return res.redirect("/login")
-      }
+        console.log("Logged in user:", req.session.userId);
 
-      if(!isMatch){
+        req.flash("success", "Login successful!");
 
-        req.flash("error","Email or password is incorrect!")
-        return res.redirect("/login")
+        return res.redirect("/user");
 
-      }
+    } catch (err) {
 
-      //Password correct
-      console.log("Login successful!")
+        console.log(err);
 
-      req.session.userId = user.id
+        req.flash("error", "Something went wrong!");
 
-      console.log("Logged in user:", req.session.userId);
+        return res.redirect("/login");
+    }
 
-      req.flash("success", "Login successful!")
-
-
-      return res.redirect("/user")
-
-
-    })
-  })
-})
+});
 
 app.post("/logout",(req,res)=>{
 
@@ -238,71 +229,87 @@ app.post("/logout",(req,res)=>{
   })
 })
 
-app.get("/profile",isLoggedIn,(req,res)=>{
+app.get("/test-async", async (req, res) => {
+
+    try {
+
+        // const db = await promiseConnection;
+
+        const [result] = await pool.query(
+            "SELECT * FROM user"
+        );
+
+        console.log(result);
+
+        res.send(result);
+
+    } catch (err) {
+
+        console.log(err);
+
+        res.send("Database error");
+
+    }
+});
+
+app.get("/profile",isLoggedIn,async(req,res)=>{
   
   res.send("Welcome to your profile!")
 
 })
 
-app.get("/user",isLoggedIn, (req, res) => {
 
-  let { search } = req.query
-  search = search?.trim();
+app.get("/user", async(req, res)=>{
 
-  // console.log(search)
+  let {search} = req.query;
 
-  if (!search) {
+  try{
 
-    let q = `select * from user`
+    // const db = await promiseConnection;
 
-    try {
-      connection.query(q, (err, result) => {
-        if (err) throw err;
-        // console.log(result)
+    let result;
 
-        res.render("show.ejs", { result, search: "" })
-      });
-    } catch (err) {
-      console.log(err);
-      res.send("some err in database")
+    if(search){
+
+      let searchValue = `%${search}%`;
+
+      const [rows] = await pool.query(
+
+        `select * from user
+        where username like ?
+        or email like ?
+        `,
+        [searchValue, searchValue]
+
+      );
+
+      result = rows;
+
+    }else{
+
+      const [rows] = await pool.query(
+        "select * from user"
+      );
+
+      result = rows;
+
     }
 
-  } else {
+    res.render("show.ejs",{result, search})
 
-    let searchValue = `%${search}%`
+  }catch(err){
 
-    let q3 = `
+    console.log(err)
 
-  select * from user
-  where username like ?
-  or email like ?
-  `;
+    req.flash("error", "Database error!")
 
-    connection.query(
-      q3, [searchValue, searchValue], (err, result) => {
-        if (err) {
-          console.log(err)
-          return res.send("Database error")
-        }
-
-
-
-        
-        res.render("show.ejs", { result, search })
-        // console.log(result)
-
-      }
-    )
-
+    return res.redirect("/user")
 
   }
 
-
-
-
 })
 
-app.get("/user/:id/edit", isLoggedIn, isOwner, (req, res) => {
+app.get("/user/:id/edit", isLoggedIn, isOwner, async(req, res) => {
 
   let { id } = req.params
   console.log(id)
@@ -310,275 +317,291 @@ app.get("/user/:id/edit", isLoggedIn, isOwner, (req, res) => {
   let q = "select * from user where id = ?"
 
   try {
-    connection.query(q, [id], (err, result) => {
-      if (err) throw err;
-      // console.log(result)
-      let user = result[0]
 
-       if (!user) {
-        req.flash("error", "User not found!")
+    // const db = await promiseConnection;
+
+    const [result] = await pool.query(q, [id]);
+
+    let user = result[0];
+
+    if (!user) {
+        req.flash("error", "User not found!");
         return res.redirect("/user");
-      }
+    }
 
-      res.render("edit.ejs", { user })
-    });
-  } catch (err) {
-    console.log(err);
-    res.send("some err in database")
-  }
+    res.render("edit.ejs", { user });
 
+} catch (err) {
+
+            console.log(err);
+
+            req.flash("error", "Some error in database!");
+            return res.redirect("/user");
+        }
+      
 
 })
 
 
-app.patch("/user/:id", isLoggedIn, isOwner,(req, res) => {
+app.patch("/user/:id", isLoggedIn, isOwner, async (req, res) => {
 
-  console.log("PATCH ROUTE HIT");
+    let { id } = req.params;
+    let { username: newuser, password: formPass } = req.body;
 
-  let { id } = req.params
+    try {
 
-  let { username: newuser, password: formPass } = req.body
+        // const db = await promiseConnection;
 
+        // 1. Find user
+        const [result] = await pool.query(
+            "SELECT * FROM user WHERE id = ?",
+            [id]
+        );
 
-
-  let q = "select * from user where id = ?"
-
-  try {
-    connection.query(q, [id], (err, result) => {
-      if (err) throw err;
-      console.log(result)
-      let user = result[0]
+        let user = result[0];
 
         if (!user) {
             req.flash("error", "User not found!");
             return res.redirect("/user");
         }
 
-        bcrypt.compare(formPass,user.password,(err,isMatch)=>{
+        // 2. Check password
+        const isMatch = await bcrypt.compare(
+            formPass,
+            user.password
+        );
 
-            if (err) {
-                console.log(err);
-                req.flash("error", "Password comparison error!");
-                return res.redirect(`/user/${id}/edit`);
-            }
+        if (!isMatch) {
+            req.flash("error", "Wrong password!");
+            return res.redirect(`/user/${id}/edit`);
+        }
 
+        // 3. Update username
+        const q = `
+            UPDATE user
+            SET username = ?
+            WHERE id = ?
+        `;
 
-          if (!isMatch) {
-            req.flash("error","Wrong password!")
-            return res.redirect(`/user/${id}/edit`)
-          } 
-          
-          else {
-            let q2 = `update user set username = '${newuser}' where id = '${id}'`
-            connection.query(q2, (err, result) => {
-               if (err) {
-                    console.log(err);
-                    req.flash("error", "Could not update user!");
-                    return res.redirect(`/user/${id}/edit`);
-                }
+        await pool.query(q, [newuser, id]);
 
+        req.flash("success", "User updated successfully!");
 
-              req.flash("success", "User updated successfully!");
-              res.redirect("/user")
-            })
-          }
-          
-        })
-  
-  
-      });
-    } catch (err) {
-      console.log(err);
-      res.send("some err in database")
-    }
-
-
-
-})
-
-app.get("/user/:id/delete", isLoggedIn, isOwner, (req, res) => {
-
-  let { id } = req.params
-  console.log(id)
-
-
-  let q = "select * from user where id = ?"
-
-  try {
-    connection.query(q, [id], (err, result) => {
-      if (err) throw err;
-      console.log(result)
-      let user = result[0]
-
-      if (!user) {
-        req.flash("error", "User not found!")
         return res.redirect("/user");
-      }
 
-      res.render("delete.ejs", { user })
-      // res.send(user)
-    });
-  } catch (err) {
-    console.log(err);
-    res.send("some err in database")
-  }
+    } catch (err) {
 
-})
-
-app.delete("/user/:id",isLoggedIn, isOwner,(req, res) => {
-
-  let { id } = req.params
-  console.log(id)
-
-  let { email: formEmail, password: formPassword } = req.body
-  console.log(formEmail)
-
-  let q = "select * from user where id = ?"
-
-  try {
-    connection.query(q, [id], (err, result) => {
-      if (err) throw err;
-      console.log(result)
-      let user = result[0]
-
-
-
-      if (formEmail != user.email) {
-        req.flash("error","Wrong email!")
-        return res.redirect(`/user/${id}/delete`)
-      }else{
-
-      
-
-      bcrypt.compare(formPassword, user.password, (err, isMatch) => {
-
-    if (err) {
         console.log(err);
 
-        req.flash("error", "Password comparison error!");
-        return res.redirect(`/user/${id}/delete`);
+        if (err.code === "ER_DUP_ENTRY") {
+            req.flash("error", "Username already exists!");
+            return res.redirect(`/user/${id}/edit`);
+        }
+
+        req.flash("error", "Could not update user!");
+
+        return res.redirect(`/user/${id}/edit`);
     }
 
-    if (!isMatch) {
-
-        req.flash("error", "Wrong password!");
-        return res.redirect(`/user/${id}/delete`);
-    }
-
-    // Password correct
-     let q2 = `delete from user where id = '${id}'`
-
-        connection.query(q2, (err, result) => {
-
-          if (err) throw err;
-          req.flash("success","User deleted successfully!")
-
-          res.redirect("/user")
-
-
-        })
 });
 
-      }
+app.get("/user/:id/delete", isLoggedIn, isOwner, async (req, res) => {
 
-      // res.render("delete.ejs",{user})
-      // res.send(user)
-    });
-  } catch (err) {
-    console.log(err);
-    res.send("some err in database")
-  }
+  let { id } = req.params
+ 
 
-  // res.send("Delete")
+  try {
 
-})
+    //  const db = await promiseConnection;
+
+    const [result] = await pool.query(
+                "SELECT * FROM user WHERE id = ?",
+                [id]
+            );
+
+            let user = result[0];
+
+           
+            if (!user) {
+                req.flash("error", "User not found!");
+                return res.redirect("/user");
+            }
+
+           return res.render("delete.ejs",{user})
+
+          }catch(err){
+            console.log(err)
+
+            req.flash("error","Some error in database")
+
+            return res.redirect(`/user/${id}/delete`)
+          }
+
+        })
+
+
+
+app.delete(
+    "/user/:id",
+    isLoggedIn,
+    isOwner,
+    async (req, res) => {
+
+        let { id } = req.params;
+
+        let {
+            email: formEmail,
+            password: formPassword
+        } = req.body;
+
+        try {
+
+            // const db = await promiseConnection;
+
+            // 1. Find user
+            const [result] = await pool.query(
+                "SELECT * FROM user WHERE id = ?",
+                [id]
+            );
+
+            let user = result[0];
+
+            // 2. Check user exists
+            if (!user) {
+                req.flash("error", "User not found!");
+                return res.redirect("/user");
+            }
+
+            // 3. Check email
+            if (formEmail !== user.email) {
+
+                req.flash("error", "Wrong email!");
+
+                return res.redirect(`/user/${id}/delete`);
+            }
+
+            // 4. Check password
+            const isMatch = await bcrypt.compare(
+                formPassword,
+                user.password
+            );
+
+            if (!isMatch) {
+
+                req.flash("error", "Wrong password!");
+
+                return res.redirect(`/user/${id}/delete`);
+            }
+
+            // 5. Delete user
+            const q = `
+                DELETE FROM user
+                WHERE id = ?
+            `;
+
+            await pool.query(q, [id]);
+
+            // 6. Success
+            req.flash(
+                "success",
+                "User deleted successfully!"
+            );
+
+            return res.redirect("/user");
+
+        } catch (err) {
+
+            console.log(err);
+
+            req.flash(
+                "error",
+                "Could not delete user!"
+            );
+
+            return res.redirect(`/user/${id}/delete`);
+        }
+    }
+);
 
 
 app.get("/user/new",(req, res) => {
   res.render("new.ejs")
 })
 
-app.post("/user",userValidation,(req, res) => {
+app.post("/user", isLoggedIn, userValidation, async (req, res) => {
 
-   let { username, email, password } = req.body
+    let { username, email, password } = req.body;
 
-  const errors = validationResult(req);
+    const errors = validationResult(req);
 
-  //Validate
-  if (!errors.isEmpty()) {
+    if (!errors.isEmpty()) {
 
-       errors.array().forEach(error => {
-        req.flash("error", error.msg);
-    });
-
-    req.flash("oldUsername",username)
-    req.flash("oldEmail",email)
-
-
-        return res.redirect("/user/new");
-    }
-
-
-  console.log("EMAIL:", email);
-  let id = uuidv4()
-
-  bcrypt.hash(password,10,(err,hash)=>{
-    if(err){
-      console.log(err)
-      req.flash("error","Password hashing error!")
-      return res.redirect("/user/new")
-    }
-
-    let q = `
-
-  insert into user(id,username,email,password)
-  values(?,?,?,?)
-
-  `;
-  connection.query(q, [id, username, email, hash], (err, result) => {
-
-    if (err) {
-
-      if (err.code === "ER_DUP_ENTRY") {
-            if (err.message.includes("user.username")) {
-
-        req.flash("error", "Username already exists!");
-
-    } else if (err.message.includes("user.email")) {
-
-        req.flash("error", "Email already exists!");
-
-    } else {
-
-        req.flash("error", "Duplicate value!");
-
-    }
+        errors.array().forEach(error => {
+            req.flash("error", error.msg);
+        });
 
         req.flash("oldUsername", username);
         req.flash("oldEmail", email);
 
         return res.redirect("/user/new");
-      }
-
-
-      // console.log(err)
-
-      req.flash("error","Some error in database")
-      return res.redirect("/user/new");
     }
 
-    console.log(result);
+    try {
 
-    req.flash("success","User created successfully!")
+        // const db = await promiseConnection;
 
-    res.redirect("/")
+        const hash = await bcrypt.hash(password, 10);
 
-  });
+        let id = uuidv4();
 
-  })
+        let q = `
+            INSERT INTO user(id, username, email, password)
+            VALUES (?, ?, ?, ?)
+        `;
 
-  
-})
+        const [result] = await pool.query(
+            q,
+            [id, username, email, hash]
+        );
+
+        console.log(result);
+
+        req.flash("success", "User created successfully!");
+
+        return res.redirect("/user");
+
+    } catch (err) {
+
+        console.log(err);
+
+        if (err.code === "ER_DUP_ENTRY") {
+
+            if (err.message.includes("user.username")) {
+
+                req.flash("error", "Username already exists!");
+
+            } else if (err.message.includes("user.email")) {
+
+                req.flash("error", "Email already exists!");
+
+            } else {
+
+                req.flash("error", "Duplicate value!");
+
+            }
+
+            req.flash("oldUsername", username);
+            req.flash("oldEmail", email);
+
+            return res.redirect("/user/new");
+        }
+
+        req.flash("error", "Some error in database!");
+
+        return res.redirect("/user/new");
+    }
+
+});
 
 
 app.listen(3000, () => {
