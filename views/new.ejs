@@ -1,31 +1,116 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Post</title>
+
+    <title>Create Account - UserVault</title>
+
+    <link rel="stylesheet" href="/css/style.css">
+    <link
+  href="https://cdn.jsdelivr.net/npm/remixicon@4.9.0/fonts/remixicon.css"
+  rel="stylesheet"
+/>
 </head>
+
 <body>
 
-<% if (error.length > 0) { %>
+    <%- include("partials/navbar") %>
 
-    <% error.forEach(msg => { %>
+    <%- include("partials/flash") %>
 
-        <p>❌ <%= msg %></p>
 
-    <% }) %>
+    <main class="auth-container">
 
-<% } %>
+        <div class="auth-card">
 
-    <h1>Add to Our DataBase</h1>
-    <form action="/user" method="post">
-        <input type="text" placeholder="username" name="username" value="<%= oldUsername %>">
-        <br><br>
-        <input type="email" placeholder="Enter your email" name="email" value="<%= oldEmail %>">
-        <br><br>
-        <input type="text" placeholder="enter your password" name="password">
-        <br><br>
-        <button>Add</button>
-    </form>
+            <h1>Create Account</h1>
+
+            <p class="auth-subtitle">
+                Create your UserVault account
+            </p>
+
+
+            <form action="/user" method="POST">
+
+                <div class="form-group">
+
+                    <label for="username">
+                        Username
+                    </label>
+
+                    <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        placeholder="Enter username"
+                        value="<%= oldUsername || '' %>"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="email">
+                        Email
+                    </label>
+
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        placeholder="Enter email"
+                        value="<%= oldEmail || '' %>"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="password">
+                        Password
+                    </label>
+
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        placeholder="Create a password"
+                        required
+                    >
+
+                </div>
+
+
+                <button
+                    type="submit"
+                    class="btn btn-primary auth-button"
+                >
+                    Create Account
+                </button>
+
+            </form>
+
+
+            <p class="auth-footer">
+
+                Already have an account?
+
+                <a href="/login">
+                    Login
+                </a>
+
+            </p>
+
+        </div>
+
+    </main>
+
 </body>
+
 </html>

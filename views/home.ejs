@@ -1,31 +1,123 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home page</title>
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>UserVault - Home</title>
+
+    <link rel="stylesheet" href="/css/style.css">
+    <link
+  href="https://cdn.jsdelivr.net/npm/remixicon@4.9.0/fonts/remixicon.css"
+  rel="stylesheet"
+/>
 </head>
+
 <body>
-        <!-- condition based login/logout -->
-    <% if (currentUserId) { %>
 
-    <p>Welcome!</p>
+    <%- include("partials/navbar") %>
 
-    <form action="/logout" method="POST">
-        <button>Logout</button>
-    </form>
+    <%- include("partials/flash") %>
 
-<% } else { %>
 
-    <a href="/login">Login</a>
-    <br><br>
-    <a href="/user/new">Register</a>
+    <main class="home">
 
-<% } %>
+        <section class="hero">
 
-    <h3>The total number of user are: <%= count %></h3>
-    <button><a href="http://localhost:3000/user/new">Join us today!</a></button>
-    <br><br>
-    <button><a href="http://localhost:3000/user">See our users!</a></button>
+            <% if (currentUserId) { %>
+
+                <p class="hero-badge">
+                    ✓ You're logged in
+                </p>
+
+                <h1>
+                    Welcome back to UserVault
+                </h1>
+
+                <p>
+                    Manage your account and explore
+                    our user community.
+                </p>
+
+                <div class="hero-actions">
+
+                    <a
+                        href="/user"
+                        class="btn btn-primary"
+                    >
+                        View Users
+                    </a>
+
+                    <a
+                        href="/user/<%= currentUserId %>/edit"
+                        class="btn btn-secondary"
+                    >
+                        Edit Profile
+                    </a>
+
+                </div>
+
+            <% } else { %>
+
+                <p class="hero-badge">
+                    Simple. Secure. User Management.
+                </p>
+
+                <h1>
+                    Welcome to UserVault
+                </h1>
+
+                <p>
+                    Create your account and become
+                    part of our community.
+                </p>
+
+                <div class="hero-actions">
+
+                    <a
+                        href="/user/new"
+                        class="btn btn-primary"
+                    >
+                        Join Us Today
+                    </a>
+
+                    <a
+                        href="/login"
+                        class="btn btn-secondary"
+                    >
+                        Login
+                    </a>
+
+                </div>
+
+            <% } %>
+
+        </section>
+
+
+        <section class="stats">
+
+            <div class="stat-card">
+
+                <h2>
+                    <%= count %>
+                </h2>
+
+                <p>
+                    Registered Users
+                </p>
+
+            </div>
+
+        </section>
+
+    </main>
+
 </body>
+
 </html>

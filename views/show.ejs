@@ -1,84 +1,133 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Show_Page</title>
-    <style>
-        table,tr,td,th{
-            border: 2px solid black;
-        }
-    </style>
+
+    <title>UserVault - Users</title>
+
+    <link rel="stylesheet" href="/css/style.css">
+    <link
+  href="https://cdn.jsdelivr.net/npm/remixicon@4.9.0/fonts/remixicon.css"
+  rel="stylesheet"
+/>
 </head>
+
 <body>
 
-    <% if(success.length>0) {%>
-        <p><%= success %></p>
-    <%}%>
+    <%- include("partials/navbar") %>
 
-    <% if(error.length>0) {%>
-        <p><%= error %></p>
-
-    <% } %>
-
-    <!-- condition based login/logout -->
-    <% if (currentUserId) { %>
-
-    <p>Welcome!</p>
-
-    <form action="/logout" method="POST">
-        <button>Logout</button>
-    </form>
-
-<% } else { %>
-
-    <a href="/login">Login</a>
-    <a href="/user/new">Register</a>
-
-<% } %>
+    <%- include("partials/flash") %>
 
 
+    <main class="dashboard">
 
-    <form action="/user" method="get">
-        <input type="text" placeholder="search by name or email" name="search" value="<%= search || ''%>">
-        <button>Submit</button>
-    </form>
+        <!-- Header -->
 
-    <% if(result.length===0) {%>
+        <div class="dashboard-header">
 
-        <h3>No user found for "<%= search %>"</h3>
-   <% } else{%>
-    <table>
-        <tr>
-            <th>id</th>
-            <th>username</th>
-            <th>email</th>
-            <th>password</th>
-           
-        </tr>
- 
- <%for(user of result){%>
-    <tr>
-    <td><%= user.id %></td>
-    <td><%= user.username %></td>
-    <td><%= user.email %></td>
-    <td><%= user.password %></td>
-    <td>
-        <form action="/user/<%= user.id %>/edit">
-            <button>Edit</button>
+            <div>
+                <h1>User Management</h1>
+                <p>Manage all registered users.</p>
+            </div>
+
+            <a href="/user/new" class="btn btn-primary">
+                + Add User
+            </a>
+
+        </div>
+
+
+        <!-- Search -->
+
+        <form action="/user" method="GET" class="search-form">
+
+            <input
+                type="text"
+                name="search"
+                placeholder="Search by username or email..."
+                value="<%= search || '' %>"
+            >
+
+            <button type="submit" class="btn btn-primary">
+                Search
+            </button>
+
         </form>
-    </td>
-    <td>
-        <form action="/user/<%= user.id%>/delete">
-            <button>Delete</button>
-        </form>
-    </td>
-    </tr>
- <%}%>
-    </table>
 
-   <%}%>
+
+        <!-- Users -->
+
+        <div class="user-grid">
+
+            <% if (result.length === 0) { %>
+
+                <div class="empty-state">
+
+                    <h2>No users found</h2>
+
+                    <p>
+                        Try searching with another username or email.
+                    </p>
+
+                </div>
+
+            <% } %>
+
+
+            <% result.forEach(user => { %>
+
+                <div class="user-card">
+
+                    <div class="user-avatar">
+                        <%= user.username.charAt(0).toUpperCase() %>
+                    </div>
+
+                    <div class="user-info">
+
+                        <h2>
+                            <%= user.username %>
+                        </h2>
+
+                        <p>
+                            <%= user.email %>
+                        </p>
+
+                    </div>
+
+
+                    <% if (currentUserId === user.id) { %>
+
+                        <div class="user-actions">
+
+                            <a
+                                href="/user/<%= user.id %>/edit"
+                                class="btn btn-edit"
+                            >
+                                Edit
+                            </a>
+
+                            <a
+                                href="/user/<%= user.id %>/delete"
+                                class="btn btn-delete"
+                            >
+                                Delete
+                            </a>
+
+                        </div>
+
+                    <% } %>
+
+                </div>
+
+            <% }) %>
+
+        </div>
+
+    </main>
 
 </body>
+
 </html>
 

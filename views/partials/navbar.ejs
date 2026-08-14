@@ -1,0 +1,28 @@
+<nav class="navbar">
+    <div class="nav-container">
+
+        <a href="/" class="logo">
+            UserVault
+        </a>
+
+        <div class="nav-links">
+
+            <% if (currentUserId) { %>
+
+                <a href="/user">Users</a>
+                <a href="/user/new">Add User</a>
+                <form action="/logout" method="post" class="logout-form">
+                    <button type="submit" class="icon"><i class="ri-user-shared-2-line"></i>Logout</button>
+                </form>
+
+            <% } else { %>
+
+                <a href="/login" class="icon"><i class="ri-account-circle-line"></i>Login</a>
+                <a href="/user/new">Register</a>
+
+            <% } %>
+
+        </div>
+
+    </div>
+</nav>
